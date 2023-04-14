@@ -4,7 +4,7 @@ const youtube = require('youtube-api');
 const fs = require('fs');
 
 const { v4:uuid } = require('uuid');
-
+const https = require('https');
 const open = require('open');
 const multer = require('multer');
 const app = express();
@@ -38,27 +38,14 @@ app.post('/upload', uploadVideoFile,async (req,res ) =>{
     const { title,description } = req.body;
     console.log("hi");
 
-   // try {
-      //const oldUser = await User.findOne({ email });
-  
-      // if (oldUser) {
-      //   return res.json({ error: "User Exists" });
-      // }
+
       await VideoUp.create({
-       // fname,
-       // lname,
-        //email,
-       // password: encryptedPassword,
-        //userType,
+   
         title,
         description,
         file:filename
       });
-    //   res.send({ status: "ok" });
-    // } catch (error) {
-    //   res.send({ status: "error" });
-    // }
-
+    
 
     open(oAuth.generateAuthUrl({
 
@@ -72,7 +59,7 @@ app.post('/upload', uploadVideoFile,async (req,res ) =>{
 })
 
 app.get('/oauth2callback',(req,res) => {
-  res.redirect("http://localhost:3000/Success")
+  res.redirect("https://localhost:8080/Success")
   const {filename,title,description} = JSON.parse(req.query.state);
   oAuth.getToken(req.query.code,(err,tokens) => {
     if (err){
@@ -100,7 +87,7 @@ youtube.videos.insert({
 
       console.log("Done");
       process.exit();
-  
+
     })
 
   })
@@ -117,7 +104,13 @@ const bcrypt = require("bcryptjs");
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 
-
+const options = {
+  key: fs.readFileSync('../clientside/localhost-key.pem'),
+  cert: fs.readFileSync('../clientside/localhost.pem'),
+};
+https
+    .createServer(options,app)
+    .listen(5000);
 
 const jwt = require("jsonwebtoken");
 var nodemailer = require("nodemailer");
@@ -143,7 +136,6 @@ require("./userDetails");
 const User = mongoose.model("UserInfo");
 app.post("/register", async (req, res) => {
   const { fname, lname, email, password, userType } = req.body;
-
   const encryptedPassword = await bcrypt.hash(password, 10);
   try {
     const oldUser = await User.findOne({ email });
@@ -163,6 +155,7 @@ app.post("/register", async (req, res) => {
     res.send({ status: "error" });
   }
 });
+
 
 app.post("/login-user", async (req, res) => {
   const { email, password } = req.body;
@@ -210,9 +203,12 @@ app.post("/userData", async (req, res) => {
   } catch (error) {}
 });
 
-app.listen(5000, () => {
-  console.log("Server Started");
-});
+// app.listen(5000, () => {
+//   console.log("Server Started");
+// });
+
+
+
 
 app.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
@@ -225,7 +221,7 @@ app.post("/forgot-password", async (req, res) => {
     const token = jwt.sign({ email: oldUser.email, id: oldUser._id }, secret, {
       expiresIn: "5m",
     });
-    const link = `http://localhost:5000/reset-password/${oldUser._id}/${token}`;
+    const link = `https://localhost:5000/reset-password/${oldUser._id}/${token}`;
     var transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
